@@ -1449,22 +1449,122 @@
                 format: 'a4'
             });
             
-            // Helper function to convert Malayalam text to English transliteration for PDF
+            // Enhanced Malayalam to English conversion with more comprehensive mapping
             function convertMalayalamToEnglish(text) {
                 const malayalamToEnglish = {
+                    // Food items
                     'സ്പൈസി ചിക്കൻ ബിരിയാണി': 'Spicy Chicken Biryani',
                     'ക്രിസ്പി സമോസ': 'Crispy Samosas',
                     'മാങ്ങോ ലസ്സി': 'Mango Lassi',
                     'കേരള ഫിഷ് കറി': 'Kerala Fish Curry',
-                    'പായസം': 'Payasam',
-                    'വളപട്ടണം': 'Valapattanam'
+                    'പായസം': 'Payasam (Sweet Rice Pudding)',
+                    'ചിക്കൻ ബിരിയാണി': 'Chicken Biryani',
+                    'മട്ടൻ ബിരിയാണി': 'Mutton Biryani',
+                    'വെജിറ്റബിൾ ബിരിയാണി': 'Vegetable Biryani',
+                    'ഫിഷ് കറി': 'Fish Curry',
+                    'ചിക്കൻ കറി': 'Chicken Curry',
+                    'മട്ടൻ കറി': 'Mutton Curry',
+                    'സമോസ': 'Samosas',
+                    'പകോറ': 'Pakoras',
+                    'ദോശ': 'Dosa',
+                    'ഇഡ്ഡലി': 'Idli',
+                    'വട': 'Vada',
+                    'ഉപ്പുമാവ്': 'Upma',
+                    'പൊറോട്ട': 'Porotta',
+                    'ചപ്പാത്തി': 'Chapathi',
+                    'നാൻ': 'Naan',
+                    'പുലാവ്': 'Pulav',
+                    'റൈസ്': 'Rice',
+                    'കഞ്ഞി': 'Kanji (Rice Porridge)',
+                    'റസം': 'Rasam',
+                    'സാംബാർ': 'Sambar',
+                    'അവിയൽ': 'Avial',
+                    'തോരൻ': 'Thoran',
+                    'കൂട്ടാൻ': 'Koottan',
+                    'പച്ചടി': 'Pachadi',
+                    'കിച്ചടി': 'Kichadi',
+                    'പരിപ്പ്': 'Dal/Lentils',
+                    'മീൻ': 'Fish',
+                    'ചിക്കൻ': 'Chicken',
+                    'മട്ടൻ': 'Mutton',
+                    'ബീഫ്': 'Beef',
+                    'പോർക്ക്': 'Pork',
+                    'എഗ്': 'Egg',
+                    'വെജിറ്റബിൾ': 'Vegetable',
+                    
+                    // Beverages
+                    'ലസ്സി': 'Lassi',
+                    'ചായ': 'Tea',
+                    'കാപ്പി': 'Coffee',
+                    'ജ്യൂസ്': 'Juice',
+                    'ഷേക്': 'Shake',
+                    'ബട്ടർമിൽക്': 'Buttermilk',
+                    'നാരങ്ങാവെള്ളം': 'Lemon Water',
+                    'തേങ്ങാവെള്ളം': 'Coconut Water',
+                    
+                    // Desserts
+                    'ഹൽവ': 'Halwa',
+                    'ലഡ്ഡു': 'Laddu',
+                    'ജലേബി': 'Jalebi',
+                    'ഗുലാബ് ജാമുൻ': 'Gulab Jamun',
+                    'റസ്ഗുള്ള': 'Rasgulla',
+                    'ഖീർ': 'Kheer',
+                    'കുൽഫി': 'Kulfi',
+                    'ഐസ്ക്രീം': 'Ice Cream',
+                    
+                    // Quantities and measures
+                    'എണ്ണം': 'pieces',
+                    'ലിറ്റർ': 'liter',
+                    'കിലോ': 'kg',
+                    'ഗ്രാം': 'grams',
+                    'പ്ലേറ്റ്': 'plate',
+                    'കപ്പ്': 'cup',
+                    'ബൗൾ': 'bowl',
+                    'പാക്കറ്റ്': 'packet',
+                    
+                    // Places
+                    'വളപട്ടണം': 'Valapattanam',
+                    'കണ്ണൂർ': 'Kannur',
+                    'കേരളം': 'Kerala',
+                    
+                    // Common words
+                    'സ്പൈസി': 'Spicy',
+                    'ക്രിസ്പി': 'Crispy',
+                    'ഫ്രഷ്': 'Fresh',
+                    'ഹോട്ട്': 'Hot',
+                    'കോൾഡ്': 'Cold',
+                    'സ്പെഷ്യൽ': 'Special',
+                    'ഡീലക്സ്': 'Deluxe',
+                    'ഫാമിലി': 'Family',
+                    'പാർട്ടി': 'Party',
+                    'മിനി': 'Mini',
+                    'ലാർജ്': 'Large',
+                    'മീഡിയം': 'Medium',
+                    'സ്മാൾ': 'Small'
                 };
                 
-                // Replace Malayalam text with English equivalents
+                // First try exact matches
+                if (malayalamToEnglish[text]) {
+                    return malayalamToEnglish[text];
+                }
+                
+                // Then try partial matches for compound words
                 let convertedText = text;
                 Object.keys(malayalamToEnglish).forEach(malayalam => {
-                    convertedText = convertedText.replace(new RegExp(malayalam, 'g'), malayalamToEnglish[malayalam]);
+                    if (convertedText.includes(malayalam)) {
+                        convertedText = convertedText.replace(new RegExp(malayalam, 'g'), malayalamToEnglish[malayalam]);
+                    }
                 });
+                
+                // If still contains Malayalam characters, add a note
+                const malayalamPattern = /[\u0D00-\u0D7F]/;
+                if (malayalamPattern.test(convertedText)) {
+                    // Extract any remaining Malayalam and add as transliteration note
+                    const malayalamParts = convertedText.match(/[\u0D00-\u0D7F\s]+/g);
+                    if (malayalamParts) {
+                        convertedText = convertedText.replace(/[\u0D00-\u0D7F\s]+/g, '[Malayalam Item]');
+                    }
+                }
                 
                 return convertedText;
             }
@@ -1613,5 +1713,5 @@
             init();
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b852551a4f9d5',t:'MTc1NjI5NzE5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b8e58e08ff9fa',t:'MTc1NjI5NzU3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
