@@ -140,10 +140,10 @@
                     <p class="text-xs sm:text-sm opacity-90 font-light malayalam-text">A fully home made solution for your party 🍽️ - വളപട്ടണം</p>
                 </div>
             </div>
-            <div class="text-left sm:text-right w-full sm:w-auto">
+            <div class="text-right w-full sm:w-auto">
                 <p class="text-xs opacity-75 mb-2 malayalam-text">We serve inside Kannur only</p>
-                <div class="flex items-center gap-2">
-                    <div id="connectionStatus" class="hidden sm:flex items-center gap-2 text-xs opacity-75">
+                <div class="flex items-center gap-2 justify-end">
+                    <div id="connectionStatus" class="flex items-center gap-2 text-xs opacity-75">
                         <div id="statusDot" class="w-2 h-2 rounded-full bg-yellow-400"></div>
                         <span id="statusText">Connecting...</span>
                     </div>
@@ -1374,7 +1374,7 @@
             
             const cartText = cart.map(item => `${item.name} (Qty: ${item.quantity})`).join('\n');
             const message = `Hello SPICY KITCHEN! 🍽️\n\nI would like to request a quotation for the following party food items:\n\n${cartText}\n\nPlease provide pricing and delivery details.\n\nThank you!`;
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            const whatsappUrl = `https://wa.me/919633943583?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
         }
 
@@ -1441,9 +1441,33 @@
                 return;
             }
 
-            // Generate PDF using jsPDF
+            // Generate PDF using jsPDF with Unicode support
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Helper function to convert Malayalam text to English transliteration for PDF
+            function convertMalayalamToEnglish(text) {
+                const malayalamToEnglish = {
+                    'സ്പൈസി ചിക്കൻ ബിരിയാണി': 'Spicy Chicken Biryani',
+                    'ക്രിസ്പി സമോസ': 'Crispy Samosas',
+                    'മാങ്ങോ ലസ്സി': 'Mango Lassi',
+                    'കേരള ഫിഷ് കറി': 'Kerala Fish Curry',
+                    'പായസം': 'Payasam',
+                    'വളപട്ടണം': 'Valapattanam'
+                };
+                
+                // Replace Malayalam text with English equivalents
+                let convertedText = text;
+                Object.keys(malayalamToEnglish).forEach(malayalam => {
+                    convertedText = convertedText.replace(new RegExp(malayalam, 'g'), malayalamToEnglish[malayalam]);
+                });
+                
+                return convertedText;
+            }
             
             // Enhanced Header with Branding
             doc.setFillColor(48, 151, 116);
@@ -1451,11 +1475,11 @@
             
             doc.setFontSize(24);
             doc.setTextColor(255, 255, 255);
-            doc.text('🍽️ SPICY KITCHEN', 20, 25);
+            doc.text('SPICY KITCHEN', 20, 25);
             
             doc.setFontSize(12);
             doc.setTextColor(255, 255, 255);
-            doc.text('Passion Served with Spice - വളപട്ടണം', 20, 35);
+            doc.text('Passion Served with Spice - Valapattanam', 20, 35);
             doc.text('Serving inside Kannur only', 20, 42);
             
             // Quotation Title
@@ -1494,8 +1518,8 @@
             doc.setTextColor(255, 255, 255);
             doc.text('ITEM DESCRIPTION', 25, yPos + 7);
             doc.text('QTY', 110, yPos + 7);
-            doc.text('RATE (₹)', 130, yPos + 7);
-            doc.text('AMOUNT (₹)', 160, yPos + 7);
+            doc.text('RATE (Rs)', 130, yPos + 7);
+            doc.text('AMOUNT (Rs)', 160, yPos + 7);
             
             yPos += 15;
             doc.setTextColor(0, 0, 0);
@@ -1512,10 +1536,12 @@
                 }
                 
                 doc.setFontSize(9);
-                doc.text(item.name.substring(0, 35), 25, yPos);
+                // Convert Malayalam text to English for PDF compatibility
+                const itemName = convertMalayalamToEnglish(item.name);
+                doc.text(itemName.substring(0, 35), 25, yPos);
                 doc.text(item.quantity.toString(), 115, yPos);
-                doc.text(`₹${parseFloat(item.price).toFixed(2)}`, 135, yPos);
-                doc.text(`₹${total.toFixed(2)}`, 165, yPos);
+                doc.text(`Rs ${parseFloat(item.price).toFixed(2)}`, 135, yPos);
+                doc.text(`Rs ${total.toFixed(2)}`, 165, yPos);
                 yPos += 10;
             });
             
@@ -1524,7 +1550,7 @@
                 yPos += 5;
                 doc.setFontSize(10);
                 doc.text('Delivery Charge:', 130, yPos);
-                doc.text(`₹${deliveryCharge.toFixed(2)}`, 165, yPos);
+                doc.text(`Rs ${deliveryCharge.toFixed(2)}`, 165, yPos);
                 grandTotal += deliveryCharge;
                 yPos += 10;
             }
@@ -1535,7 +1561,7 @@
             doc.rect(120, yPos - 5, 70, 15, 'F');
             doc.setFontSize(12);
             doc.setTextColor(255, 255, 255);
-            doc.text(`TOTAL: ₹${grandTotal.toFixed(2)}`, 130, yPos + 5);
+            doc.text(`TOTAL: Rs ${grandTotal.toFixed(2)}`, 130, yPos + 5);
             
             // Terms and conditions
             yPos += 25;
@@ -1546,7 +1572,6 @@
             doc.text('• Advance payment required for order confirmation', 20, yPos + 8);
             doc.text('• Delivery charges may vary based on location within Kannur', 20, yPos + 15);
             doc.text('• Menu items subject to availability', 20, yPos + 22);
-            doc.text('• Prices are inclusive of all taxes', 20, yPos + 29);
             
             // Footer
             yPos += 45;
@@ -1556,8 +1581,8 @@
             doc.setFontSize(10);
             doc.setTextColor(255, 255, 255);
             doc.text('Thank you for choosing SPICY KITCHEN!', 20, yPos + 8);
-            doc.text('🍽️ A fully home made solution for your party 🍽️ - വളപട്ടണം', 20, yPos + 16);
-            doc.text('Contact: +91-XXXXXXXXXX | Email: info@spicykitchen.com', 20, yPos + 22);
+            doc.text('A fully home made solution for your party - Valapattanam', 20, yPos + 16);
+            doc.text('Contact: +919633943583 | Serving Kannur with authentic flavors', 20, yPos + 22);
             
             // Download PDF
             doc.save(`SPICY_KITCHEN_Quotation_${quotationNo}_${customerName.replace(/\s+/g, '_')}.pdf`);
@@ -1588,5 +1613,5 @@
             init();
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b485de51df9e7',t:'MTc1NjI5NDcwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b852551a4f9d5',t:'MTc1NjI5NzE5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
