@@ -9,7 +9,6 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@300;400;500;600;700&display=swap');
@@ -143,10 +142,16 @@
             </div>
             <div class="text-left sm:text-right w-full sm:w-auto">
                 <p class="text-xs opacity-75 mb-2 malayalam-text">We serve inside Kannur only</p>
-                <button id="adminBtn" class="glass-effect w-10 h-10 sm:w-auto sm:px-6 sm:py-3 rounded-2xl text-sm font-bold hover:bg-white hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                    <span class="sm:hidden">A</span>
-                    <span class="hidden sm:inline">Admin Panel</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <div id="connectionStatus" class="hidden sm:flex items-center gap-2 text-xs opacity-75">
+                        <div id="statusDot" class="w-2 h-2 rounded-full bg-yellow-400"></div>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                    <button id="adminBtn" class="glass-effect w-10 h-10 sm:w-auto sm:px-6 sm:py-3 rounded-2xl text-sm font-bold hover:bg-white hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                        <span class="sm:hidden">A</span>
+                        <span class="hidden sm:inline">Admin Panel</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -399,15 +404,23 @@
             measurementId: "G-GTSRPSQQKH"
         };
 
+        // Global variables for Firebase
+        let database;
+
         // Initialize Firebase with error handling
-        try {
-            firebase.initializeApp(firebaseConfig);
-            const database = firebase.database();
-            const storage = firebase.storage();
-            console.log('✅ Firebase initialized successfully');
-        } catch (error) {
-            console.error('❌ Firebase initialization failed:', error);
-            alert('Firebase configuration error. Please check your settings.');
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                database = firebase.database();
+                console.log('✅ Firebase initialized successfully (Database only)');
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase initialization failed:', error);
+                console.log('🔄 Running in offline mode with sample data');
+                return false;
+            }
         }
 
         // Data storage
@@ -415,36 +428,91 @@
         let cart = [];
         let selectedItemForQuantity = null;
         let isLoading = false;
+        let isFirebaseConnected = false;
 
         // Firebase Functions
         function loadMenuItemsFromFirebase() {
+            if (!isFirebaseConnected) {
+                loadSampleData();
+                return;
+            }
+            
             isLoading = true;
             showLoadingState();
             
-            database.ref('menuItems').on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    menuItems = Object.keys(data).map(key => ({
-                        id: key,
-                        ...data[key]
-                    }));
-                } else {
-                    // Initialize with default items if database is empty
-                    initializeDefaultItems();
+            try {
+                database.ref('menuItems').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        menuItems = Object.keys(data).map(key => ({
+                            id: key,
+                            ...data[key]
+                        }));
+                    } else {
+                        // Initialize with default items if database is empty
+                        initializeDefaultItems();
+                    }
+                    isLoading = false;
+                    renderMenuItems();
+                    renderAdminMenu();
+                    hideLoadingState();
+                }, (error) => {
+                    console.error('Error loading menu items:', error);
+                    isLoading = false;
+                    hideLoadingState();
+                    // Fallback to sample data
+                    loadSampleData();
+                });
+            } catch (error) {
+                console.error('Firebase connection error:', error);
+                loadSampleData();
+            }
+        }
+
+        function loadSampleData() {
+            console.log('📦 Loading sample data...');
+            menuItems = [
+                {
+                    id: 'sample1',
+                    name: "സ്പൈസി ചിക്കൻ ബിരിയാണി",
+                    description: "പരമ്പരാഗത മസാലകളും ഹെർബുകളും ചേർത്ത് പാകം ചെയ്ത സുഗന്ധമുള്ള ബാസ്മതി അരിയും ടെൻഡർ ചിക്കൻ കഷണങ്ങളും. പാർട്ടികൾക്ക് അനുയോജ്യം!",
+                    category: "mains",
+                    image: "🍛"
+                },
+                {
+                    id: 'sample2',
+                    name: "ക്രിസ്പി സമോസ (50 എണ്ണം)",
+                    description: "മസാല ചേർത്ത ഉരുളക്കിഴങ്ങും പയറും നിറച്ച സ്വർണ്ണ നിറത്തിലുള്ള വറുത്ത പേസ്ട്രികൾ. മികച്ച പാർട്ടി സ്റ്റാർട്ടർ!",
+                    category: "appetizers",
+                    image: "🥟"
+                },
+                {
+                    id: 'sample3',
+                    name: "മാങ്ങോ ലസ്സി (5 ലിറ്റർ)",
+                    description: "മധുരമുള്ള മാങ്ങാ പൾപ്പ് ചേർത്ത ഉന്മേഷദായകമായ തൈര് അടിസ്ഥാനമാക്കിയുള്ള പാനീയം. 20-25 പേർക്ക് മതി.",
+                    category: "beverages",
+                    image: "🥤"
+                },
+                {
+                    id: 'sample4',
+                    name: "കേരള ഫിഷ് കറി",
+                    description: "പുതിയ മീനും കൊക്കും കുടംപുളിയും ചേർത്ത് പരമ്പരാഗത രീതിയിൽ പാകം ചെയ്ത കറി. അരിയോടൊപ്പം വിളമ്പുന്നു.",
+                    category: "mains",
+                    image: "🐟"
+                },
+                {
+                    id: 'sample5',
+                    name: "പായസം (2 ലിറ്റർ)",
+                    description: "അരിയും പാലും ചേർത്ത് മധുരമുള്ള പരമ്പരാഗത മധുരപലഹാരം. കാർദ്ദമോം, ബദാം എന്നിവ ചേർത്തത്.",
+                    category: "desserts",
+                    image: "🍮"
                 }
-                isLoading = false;
-                renderMenuItems();
-                renderAdminMenu();
-                hideLoadingState();
-            }, (error) => {
-                console.error('Error loading menu items:', error);
-                isLoading = false;
-                hideLoadingState();
-                // Fallback to default items
-                initializeDefaultItems();
-                renderMenuItems();
-                renderAdminMenu();
-            });
+            ];
+            
+            isLoading = false;
+            renderMenuItems();
+            renderAdminMenu();
+            hideLoadingState();
         }
 
         function initializeDefaultItems() {
@@ -477,6 +545,16 @@
 
         function saveMenuItemToFirebase(item) {
             return new Promise((resolve, reject) => {
+                if (!isFirebaseConnected) {
+                    // Offline mode - save to local array
+                    const newId = 'local_' + Date.now();
+                    menuItems.push({...item, id: newId});
+                    renderMenuItems();
+                    renderAdminMenu();
+                    resolve(newId);
+                    return;
+                }
+                
                 try {
                     const newRef = database.ref('menuItems').push();
                     newRef.set(item)
@@ -496,33 +574,59 @@
         }
 
         function updateMenuItemInFirebase(id, item) {
-            return database.ref(`menuItems/${id}`).set(item);
+            return new Promise((resolve, reject) => {
+                if (!isFirebaseConnected) {
+                    // Offline mode - update local array
+                    const index = menuItems.findIndex(i => i.id === id);
+                    if (index !== -1) {
+                        menuItems[index] = {...item, id: id};
+                        renderMenuItems();
+                        renderAdminMenu();
+                        resolve();
+                    } else {
+                        reject(new Error('Item not found'));
+                    }
+                    return;
+                }
+                
+                database.ref(`menuItems/${id}`).set(item)
+                    .then(resolve)
+                    .catch(reject);
+            });
         }
 
         function deleteMenuItemFromFirebase(id) {
-            return database.ref(`menuItems/${id}`).remove();
+            return new Promise((resolve, reject) => {
+                if (!isFirebaseConnected) {
+                    // Offline mode - remove from local array
+                    menuItems = menuItems.filter(i => i.id !== id);
+                    renderMenuItems();
+                    renderAdminMenu();
+                    resolve();
+                    return;
+                }
+                
+                database.ref(`menuItems/${id}`).remove()
+                    .then(resolve)
+                    .catch(reject);
+            });
         }
 
         function uploadImageToFirebase(file, path) {
             return new Promise((resolve, reject) => {
-                const storageRef = storage.ref().child(path);
-                const uploadTask = storageRef.put(file);
-                
-                uploadTask.on('state_changed',
-                    (snapshot) => {
-                        // Progress function
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        console.log('Upload is ' + progress + '% done');
-                    },
-                    (error) => {
-                        reject(error);
-                    },
-                    () => {
-                        uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                            resolve(downloadURL);
-                        });
-                    }
-                );
+                // Always use base64 to avoid CORS issues completely
+                console.log('📸 Using base64 storage to avoid CORS issues');
+                convertToBase64(file).then(resolve).catch(reject);
+            });
+        }
+
+        // Helper function to convert file to base64
+        function convertToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
 
@@ -542,39 +646,42 @@
 
         // Check Firebase connection and setup
         function checkFirebaseConnection() {
-            console.log('🔄 Checking Firebase connection...');
-            
-            // Check if Firebase is properly configured
-            if (!firebase.apps.length) {
-                console.error('❌ Firebase not initialized');
-                showFirebaseSetupInstructions();
+            if (!isFirebaseConnected) {
+                console.log('🔄 Running in offline mode - Firebase not available');
+                updateConnectionStatus(false);
                 return;
             }
             
-            // Test database connection
-            database.ref('.info/connected').on('value', (snapshot) => {
-                if (snapshot.val() === true) {
-                    console.log('✅ Firebase Database connected successfully');
-                    hideFirebaseSetupInstructions();
-                } else {
-                    console.log('❌ Firebase Database disconnected');
-                    showFirebaseSetupInstructions();
-                }
-            });
+            console.log('🔄 Checking Firebase connection...');
             
-            // Test a simple write operation
-            database.ref('test').set({
-                timestamp: Date.now(),
-                message: 'Connection test'
-            }).then(() => {
-                console.log('✅ Firebase write test successful');
-                // Clean up test data
-                database.ref('test').remove();
-            }).catch((error) => {
-                console.error('❌ Firebase write test failed:', error);
-                console.error('Error details:', error.message);
-                showFirebaseSetupInstructions();
-            });
+            try {
+                // Test database connection
+                database.ref('.info/connected').on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        console.log('✅ Firebase Database connected successfully');
+                        updateConnectionStatus(true);
+                    } else {
+                        console.log('❌ Firebase Database disconnected');
+                        updateConnectionStatus(false);
+                    }
+                });
+                
+                // Test a simple write operation
+                database.ref('test').set({
+                    timestamp: Date.now(),
+                    message: 'Connection test'
+                }).then(() => {
+                    console.log('✅ Firebase write test successful');
+                    // Clean up test data
+                    database.ref('test').remove();
+                }).catch((error) => {
+                    console.error('❌ Firebase write test failed:', error);
+                    updateConnectionStatus(false);
+                });
+            } catch (error) {
+                console.error('❌ Firebase connection check failed:', error);
+                updateConnectionStatus(false);
+            }
         }
 
         // Show Firebase setup instructions
@@ -654,42 +761,85 @@
             }
         }
 
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            if (statusDot && statusText && connectionStatus) {
+                connectionStatus.classList.remove('hidden');
+                
+                if (connected) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-green-400';
+                    statusText.textContent = 'Online';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-red-400';
+                    statusText.textContent = 'Offline Mode';
+                }
+            }
+        }
+
         // Initialize app
         function init() {
-            checkFirebaseConnection();
-            loadSavedBackground();
-            loadMenuItemsFromFirebase();
-            updateCartCount();
+            console.log('🔧 Setting up Spicy Kitchen...');
             
-            // Event listeners
-            document.getElementById('adminBtn').addEventListener('click', openAdmin);
-            document.getElementById('closeAdmin').addEventListener('click', closeAdmin);
-            document.getElementById('menuForm').addEventListener('submit', addMenuItem);
-            document.getElementById('viewCart').addEventListener('click', openCart);
-            document.getElementById('closeCart').addEventListener('click', closeCart);
-            document.getElementById('requestQuotation').addEventListener('click', requestQuotation);
-            document.getElementById('addQuotationItem').addEventListener('click', addQuotationItem);
-            document.getElementById('addFromMenu').addEventListener('click', addFromMenu);
-            document.getElementById('generatePDF').addEventListener('click', generatePDF);
+            // Initialize Firebase
+            isFirebaseConnected = initializeFirebase();
+            updateConnectionStatus(isFirebaseConnected);
+            
+            if (isFirebaseConnected) {
+                loadSavedBackground();
+                loadMenuItemsFromFirebase();
+                checkFirebaseConnection();
+            } else {
+                // Load sample data for offline mode
+                loadSampleData();
+            }
+            
+            updateCartCount();
+            setupEventListeners();
+            
+            console.log('✅ Spicy Kitchen initialized successfully!');
+        }
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            console.log('🔗 Setting up event listeners...');
+            
+            // Main navigation
+            safeAddEventListener('adminBtn', 'click', openAdmin);
+            safeAddEventListener('closeAdmin', 'click', closeAdmin);
+            safeAddEventListener('viewCart', 'click', openCart);
+            safeAddEventListener('closeCart', 'click', closeCart);
+            
+            // Forms
+            safeAddEventListener('menuForm', 'submit', addMenuItem);
+            safeAddEventListener('editForm', 'submit', updateMenuItem);
+            
+            // Cart and quotation
+            safeAddEventListener('requestQuotation', 'click', requestQuotation);
+            safeAddEventListener('addQuotationItem', 'click', addQuotationItem);
+            safeAddEventListener('addFromMenu', 'click', addFromMenu);
+            safeAddEventListener('generatePDF', 'click', generatePDF);
             
             // Quantity modal
-            document.getElementById('cancelQty').addEventListener('click', closeQuantityModal);
-            document.getElementById('confirmQty').addEventListener('click', confirmQuantity);
-            document.getElementById('decreaseQty').addEventListener('click', () => adjustQuantity(-1));
-            document.getElementById('increaseQty').addEventListener('click', () => adjustQuantity(1));
+            safeAddEventListener('cancelQty', 'click', closeQuantityModal);
+            safeAddEventListener('confirmQty', 'click', confirmQuantity);
+            safeAddEventListener('decreaseQty', 'click', () => adjustQuantity(-1));
+            safeAddEventListener('increaseQty', 'click', () => adjustQuantity(1));
             
             // Edit modal
-            document.getElementById('cancelEdit').addEventListener('click', closeEditModal);
-            document.getElementById('editForm').addEventListener('submit', updateMenuItem);
+            safeAddEventListener('cancelEdit', 'click', closeEditModal);
             
-            // Photo preview
-            document.getElementById('itemPhoto').addEventListener('change', previewPhoto);
-            document.getElementById('editItemPhoto').addEventListener('change', previewEditPhoto);
-            document.getElementById('backgroundPhoto').addEventListener('change', previewBackgroundPhoto);
+            // Photo previews
+            safeAddEventListener('itemPhoto', 'change', previewPhoto);
+            safeAddEventListener('editItemPhoto', 'change', previewEditPhoto);
+            safeAddEventListener('backgroundPhoto', 'change', previewBackgroundPhoto);
             
-            // Background photo controls
-            document.getElementById('uploadBackground').addEventListener('click', updateBackground);
-            document.getElementById('resetBackground').addEventListener('click', resetBackground);
+            // Background controls
+            safeAddEventListener('uploadBackground', 'click', updateBackground);
+            safeAddEventListener('resetBackground', 'click', resetBackground);
 
             // Category filters
             document.querySelectorAll('.category-filter').forEach(btn => {
@@ -701,6 +851,17 @@
                     filterMenuItems(e.target.dataset.category);
                 });
             });
+        }
+
+        // Safe event listener helper
+        function safeAddEventListener(elementId, event, handler) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.addEventListener(event, handler);
+                console.log(`✅ Event listener added for ${elementId}`);
+            } else {
+                console.warn(`⚠️ Element not found: ${elementId}`);
+            }
         }
 
         function previewPhoto() {
@@ -752,9 +913,8 @@
                 btn.textContent = 'Uploading...';
                 btn.disabled = true;
                 
-                // Upload to Firebase Storage
-                const imagePath = `backgrounds/background_${Date.now()}_${file.name}`;
-                const imageUrl = await uploadImageToFirebase(file, imagePath);
+                // Convert image to base64 (no Firebase Storage needed)
+                const imageUrl = await convertToBase64(file);
                 
                 // Update body background with the uploaded image
                 document.body.style.backgroundImage = `linear-gradient(135deg, rgba(248, 249, 250, 0.85) 0%, rgba(233, 236, 239, 0.85) 100%), url('${imageUrl}')`;
@@ -762,8 +922,18 @@
                 document.body.style.backgroundPosition = 'center';
                 document.body.style.backgroundAttachment = 'fixed';
                 
-                // Store in Firebase Database
-                await database.ref('settings/backgroundImage').set(imageUrl);
+                // Store in Firebase Database (or skip if offline)
+                if (isFirebaseConnected && database) {
+                    try {
+                        await database.ref('settings/backgroundImage').set(imageUrl);
+                        console.log('✅ Background saved to Firebase Database');
+                    } catch (dbError) {
+                        console.warn('⚠️ Could not save background to database:', dbError);
+                        // Continue anyway - the background is still applied locally
+                    }
+                } else {
+                    console.log('📱 Background applied locally (offline mode)');
+                }
                 
                 // Show success message
                 btn.textContent = 'Background Updated!';
@@ -823,18 +993,27 @@
         }
 
         function loadSavedBackground() {
+            if (!isFirebaseConnected) {
+                console.log('🎨 Using default background (offline mode)');
+                return;
+            }
+            
             // Load background from Firebase
-            database.ref('settings/backgroundImage').once('value', (snapshot) => {
-                const backgroundUrl = snapshot.val();
-                if (backgroundUrl) {
-                    document.body.style.backgroundImage = `linear-gradient(135deg, rgba(248, 249, 250, 0.85) 0%, rgba(233, 236, 239, 0.85) 100%), url('${backgroundUrl}')`;
-                    document.body.style.backgroundSize = 'cover';
-                    document.body.style.backgroundPosition = 'center';
-                    document.body.style.backgroundAttachment = 'fixed';
-                }
-            }).catch((error) => {
-                console.error('Error loading background:', error);
-            });
+            try {
+                database.ref('settings/backgroundImage').once('value', (snapshot) => {
+                    const backgroundUrl = snapshot.val();
+                    if (backgroundUrl) {
+                        document.body.style.backgroundImage = `linear-gradient(135deg, rgba(248, 249, 250, 0.85) 0%, rgba(233, 236, 239, 0.85) 100%), url('${backgroundUrl}')`;
+                        document.body.style.backgroundSize = 'cover';
+                        document.body.style.backgroundPosition = 'center';
+                        document.body.style.backgroundAttachment = 'fixed';
+                    }
+                }).catch((error) => {
+                    console.error('Error loading background:', error);
+                });
+            } catch (error) {
+                console.error('Background loading error:', error);
+            }
         }
 
         function openAdmin() {
@@ -861,85 +1040,102 @@
             }
             
             try {
-                btn.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Saving...</div>';
+                btn.innerHTML = '⚡ Saving Instantly...';
                 btn.disabled = true;
                 
-                console.log('🚀 Starting to add menu item instantly...');
+                console.log('🚀 Starting instant save process...');
                 
                 const photoFile = document.getElementById('itemPhoto').files[0];
-                let imageData = '🍽️';
                 
-                // Create the item object first
+                // Create the item object with emoji placeholder
                 const newItem = {
                     name: name,
                     description: description,
                     category: category,
-                    image: imageData,
+                    image: '🍽️', // Always start with emoji
                     createdAt: Date.now(),
                     status: 'active'
                 };
                 
-                // Save to Firebase immediately (without waiting for image upload)
-                console.log('💾 Saving item to Firebase instantly...');
+                // INSTANT SAVE: Save to Firebase database immediately
+                console.log('💾 Saving to database instantly...');
                 const itemId = await saveMenuItemToFirebase(newItem);
                 console.log('✅ Item saved instantly with ID:', itemId);
                 
-                // Clear form immediately after save
+                // INSTANT FEEDBACK: Clear form and show success immediately
                 document.getElementById('menuForm').reset();
                 document.getElementById('photoPreview').classList.add('hidden');
-                
-                // Show instant success
                 btn.innerHTML = '✅ Saved Instantly!';
                 btn.classList.remove('luxury-button');
-                btn.classList.add('bg-green-600');
+                btn.classList.add('bg-green-600', 'text-white');
                 
-                // Upload image in background if provided
+                // BACKGROUND PROCESS: Upload image if provided (don't wait for this)
                 if (photoFile) {
-                    console.log('📸 Uploading image in background...');
-                    try {
-                        const imagePath = `menu-images/${itemId}_${Date.now()}_${photoFile.name}`;
-                        const imageUrl = await uploadImageToFirebase(photoFile, imagePath);
-                        
-                        // Update the item with the image URL
-                        await updateMenuItemInFirebase(itemId, {
-                            ...newItem,
-                            image: imageUrl,
-                            updatedAt: Date.now()
-                        });
-                        
-                        console.log('✅ Image uploaded and item updated');
-                        btn.innerHTML = '✅ Saved with Image!';
-                    } catch (imageError) {
-                        console.error('⚠️ Image upload failed, but item was saved:', imageError);
-                        btn.innerHTML = '✅ Saved (Image Failed)';
-                    }
+                    console.log('📸 Starting background image upload...');
+                    uploadImageInBackground(itemId, photoFile, newItem, btn);
+                } else {
+                    // Reset button after short delay if no image
+                    setTimeout(() => {
+                        resetButton(btn, originalText);
+                    }, 1500);
                 }
                 
-                // Reset button after delay
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.classList.add('luxury-button');
-                    btn.classList.remove('bg-green-600');
-                    btn.disabled = false;
-                }, 2000);
-                
             } catch (error) {
-                console.error('❌ Error adding menu item:', error);
+                console.error('❌ Error in instant save:', error);
                 
-                // Show specific error messages
-                let errorMessage = 'Failed to save item. ';
+                // Show user-friendly error message
+                let errorMessage = 'Could not save item. ';
                 if (error.code === 'PERMISSION_DENIED') {
-                    errorMessage += 'Please check your Firebase database rules.';
-                } else if (error.code === 'NETWORK_ERROR') {
-                    errorMessage += 'Please check your internet connection.';
+                    errorMessage += 'Database permission denied - check Firebase rules.';
+                } else if (error.message && error.message.includes('network')) {
+                    errorMessage += 'Network error - check your connection.';
                 } else {
-                    errorMessage += error.message || 'Please try again.';
+                    errorMessage += 'Please try again.';
                 }
                 
                 alert(errorMessage);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                resetButton(btn, originalText);
             }
+        }
+
+        // Background image upload function (non-blocking)
+        async function uploadImageInBackground(itemId, photoFile, originalItem, btn) {
+            try {
+                btn.innerHTML = '📸 Adding Image...';
+                
+                // Convert to base64 directly (no Firebase Storage)
+                const imageUrl = await convertToBase64(photoFile);
+                
+                // Update the item with the actual image
+                await updateMenuItemInFirebase(itemId, {
+                    ...originalItem,
+                    image: imageUrl,
+                    updatedAt: Date.now()
+                });
+                
+                console.log('✅ Background image processing completed');
+                btn.innerHTML = '✅ Saved with Image!';
+                
+                setTimeout(() => {
+                    resetButton(btn, 'Add Menu Item');
+                }, 2000);
+                
+            } catch (imageError) {
+                console.error('⚠️ Background image processing failed:', imageError);
+                btn.innerHTML = '✅ Saved (Image Failed)';
+                
+                setTimeout(() => {
+                    resetButton(btn, 'Add Menu Item');
+                }, 2000);
+            }
+        }
+
+        // Helper function to reset button
+        function resetButton(btn, originalText) {
+            btn.innerHTML = originalText;
+            btn.classList.add('luxury-button');
+            btn.classList.remove('bg-green-600', 'text-white');
+            btn.disabled = false;
         }
 
         function renderMenuItems() {
@@ -948,8 +1144,9 @@
                 <div class="menu-card rounded-3xl p-4 sm:p-6 luxury-shadow" data-category="${item.category}">
                     <div class="flex flex-col sm:flex-row gap-4">
                         <div class="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 mx-auto sm:mx-0">
-                            ${item.image.startsWith('data:') ? 
-                                `<img src="${item.image}" alt="${item.name}" class="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-2xl luxury-shadow">` : 
+                            ${isImageUrl(item.image) ? 
+                                `<img src="${item.image}" alt="${item.name}" class="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-2xl luxury-shadow" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 <div class="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center text-4xl sm:text-5xl luxury-gradient rounded-2xl text-white" style="display:none;">🍽️</div>` : 
                                 `<div class="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center text-4xl sm:text-5xl luxury-gradient rounded-2xl text-white">${item.image}</div>`
                             }
                         </div>
@@ -964,14 +1161,20 @@
             updateMenuSelector();
         }
 
+        // Helper function to check if string is an image URL
+        function isImageUrl(str) {
+            return str && (str.startsWith('data:image/') || str.startsWith('http://') || str.startsWith('https://'));
+        }
+
         function renderAdminMenu() {
             const container = document.getElementById('adminMenuList');
             container.innerHTML = menuItems.map(item => `
                 <div class="flex justify-between items-center p-4 glass-effect rounded-2xl">
                     <div class="flex gap-4 items-center">
                         <div class="w-14 h-14">
-                            ${item.image.startsWith('data:') ? 
-                                `<img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-2xl">` : 
+                            ${isImageUrl(item.image) ? 
+                                `<img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-2xl" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 <div class="w-14 h-14 flex items-center justify-center text-2xl luxury-gradient rounded-2xl text-white" style="display:none;">🍽️</div>` : 
                                 `<div class="w-14 h-14 flex items-center justify-center text-2xl luxury-gradient rounded-2xl text-white">${item.image}</div>`
                             }
                         </div>
@@ -1069,9 +1272,8 @@
                 let imageData = currentItem.image; // Keep existing image by default
                 
                 if (photoFile) {
-                    // Upload new image to Firebase Storage
-                    const imagePath = `menu-images/${Date.now()}_${photoFile.name}`;
-                    imageData = await uploadImageToFirebase(photoFile, imagePath);
+                    // Convert new image to base64
+                    imageData = await convertToBase64(photoFile);
                 }
                 
                 const updatedItem = {
@@ -1142,8 +1344,9 @@
                 <div class="flex justify-between items-center p-4 glass-effect rounded-2xl">
                     <div class="flex gap-4 items-center">
                         <div class="w-14 h-14">
-                            ${item.image.startsWith('data:') ? 
-                                `<img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-2xl">` : 
+                            ${isImageUrl(item.image) ? 
+                                `<img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-2xl" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 <div class="w-14 h-14 flex items-center justify-center text-2xl luxury-gradient rounded-2xl text-white" style="display:none;">🍽️</div>` : 
                                 `<div class="w-14 h-14 flex items-center justify-center text-2xl luxury-gradient rounded-2xl text-white">${item.image}</div>`
                             }
                         </div>
@@ -1372,8 +1575,18 @@
             }, 3000);
         }
 
-        // Initialize the app
-        init();
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Initializing Spicy Kitchen App...');
+            init();
+        });
+
+        // Fallback initialization if DOMContentLoaded already fired
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b2bc917dff9fa',t:'MTc1NjI5MzUzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'975b485de51df9e7',t:'MTc1NjI5NDcwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
